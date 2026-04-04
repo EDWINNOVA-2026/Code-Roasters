@@ -1,22 +1,26 @@
 import jwt from "jsonwebtoken";
-import { cookies } from "next/headers";
-import { connectDB } from "@/lib/mongodb";
-import User from "@/models/User";
 
-export async function GET() {
-  const token = cookies().get("token")?.value;
-
-  if (!token) {
-    return Response.json({ user: null });
-  }
-
+export async function GET(req) {
   try {
+    const cookie = req.headers.get("cookie") || "";
+    const token = cookie
+      .split(";")
+      .find((c) => c.trim().startsWith("token="))
+      ?.split("=")[1];
+
+    if (!token) {
+      return Response.json({ user: null });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    await connectDB();
-    const user = await User.findById(decoded.id).select("-password");
-
-    return Response.json({ user });
+    return Response.json({
+      user: {
+        id: decoded.id,
+        role: decoded.role,
+        email: decoded.email, // ✅ ADD THIS
+      },
+    });
   } catch {
     return Response.json({ user: null });
   }

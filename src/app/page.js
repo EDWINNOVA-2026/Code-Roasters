@@ -1,6 +1,6 @@
 "use client";
-
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin,
@@ -40,14 +40,78 @@ export default function UserView() {
   const [isBooking, setIsBooking] = useState(false);
   const [isTracking, setIsTracking] = useState(false);
   const [selectedType, setSelectedType] = useState(null);
+  const [user, setUser] = useState(null);
+  const router = useRouter();
+
 
   const handleSOS = () => {
     setIsBooking(false);
     setIsTracking(true);
   };
 
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include", // 🔥 REQUIRED
+          cache: "no-store",
+        });
+        const data = await res.json();
+        setUser(data.user);
+      } catch {
+        setUser(null);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+
+    setUser(null);
+
+    router.push("/login");
+  };
   return (
+
     <div className="relative z-10 flex flex-col items-center min-h-screen pb-8 px-4">
+
+      {/* 🔐 LOGIN BUTTONS (TOP RIGHT) */}
+      <div className="fixed top-6 right-6 z-50 flex gap-2 bg-black/40 backdrop-blur-xl border border-white/10 p-2 rounded-2xl shadow-[0_0_30px_rgba(255,165,0,0.2)]">
+
+        {user ? (
+          <div className="flex items-center gap-3">
+
+            {/* USER NAME */}
+            <div className="px-4 py-2 rounded-xl bg-white/5 text-xs text-white">
+              👤 {user.email?.split("@")[0].charAt(0).toUpperCase() + user.email?.split("@")[0].slice(1)}
+            </div>
+
+            {/* LOGOUT */}
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-xl text-xs bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition"
+            >
+              Logout
+            </button>
+
+          </div>
+        ) : (
+          <button
+            onClick={() => router.push("/login")}
+            className="px-5 py-2.5 rounded-xl text-xs font-semibold text-white 
+    bg-gradient-to-r from-primary to-amber-500 
+    shadow-[0_0_20px_rgba(255,165,0,0.35)] 
+    hover:scale-105 transition"
+          >
+            Login
+          </button>
+        )}
+
+      </div>
       {/* Status bar */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -162,6 +226,7 @@ export default function UserView() {
               {/* 🟢 LIVE DOT */}
               <motion.div
                 className="w-2.5 h-2.5 rounded-full bg-green-400"
+
                 animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
                 transition={{ duration: 1.2, repeat: Infinity }}
               />

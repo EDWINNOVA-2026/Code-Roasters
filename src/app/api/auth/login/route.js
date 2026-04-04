@@ -7,10 +7,9 @@ export async function POST(req) {
   try {
     const { email, password } = await req.json();
 
-    // 🔒 Validate input
     if (!email || !password) {
       return Response.json(
-        { error: "Email and password required" },
+        { message: "Email and password required" },
         { status: 400 }
       );
     }
@@ -21,7 +20,7 @@ export async function POST(req) {
 
     if (!user) {
       return Response.json(
-        { error: "User not found" },
+        { message: "User not found" },
         { status: 400 }
       );
     }
@@ -30,19 +29,20 @@ export async function POST(req) {
 
     if (!isMatch) {
       return Response.json(
-        { error: "Invalid credentials" },
+        { message: "Invalid credentials" },
         { status: 400 }
       );
     }
 
-    // 🔐 Create token
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    // 🚫 Remove sensitive data
+ const token = jwt.sign(
+  {
+    id: user._id,
+    role: user.role,
+    email: user.email, // ✅ ADD THIS
+  },
+  process.env.JWT_SECRET,
+  { expiresIn: "7d" }
+);
     const safeUser = {
       id: user._id,
       email: user.email,
@@ -51,19 +51,18 @@ export async function POST(req) {
     };
 
     return Response.json(
-      { user: safeUser },
+      { message: "Login successful", user: safeUser },
       {
         status: 200,
         headers: {
-          "Set-Cookie": `token=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Strict; ${
-            process.env.NODE_ENV === "production" ? "Secure;" : ""
-          }`,
+          "Set-Cookie": `token=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax; ${process.env.NODE_ENV === "production" ? "Secure;" : ""
+            }`,
         },
       }
     );
   } catch (error) {
     return Response.json(
-      { error: "Server error" },
+      { message: "Server error" },
       { status: 500 }
     );
   }
