@@ -4,29 +4,67 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 export async function POST(req) {
-  const { email, password } = await req.json();
+  try {
+    const { email, password } = await req.json();
 
-  await connectDB();
+    // 🔒 Validate input
+    if (!email || !password) {
+      return Response.json(
+        { error: "Email and password required" },
+        { status: 400 }
+      );
+    }
 
-  const user = await User.findOne({ email });
-  if (!user) {
-    return Response.json({ error: "User not found" }, { status: 400 });
+    await connectDB();
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return Response.json(
+        { error: "User not found" },
+        { status: 400 }
+      );
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return Response.json(
+        { error: "Invalid credentials" },
+        { status: 400 }
+      );
+    }
+
+    // 🔐 Create token
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // 🚫 Remove sensitive data
+    const safeUser = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+    };
+
+    return Response.json(
+      { user: safeUser },
+      {
+        status: 200,
+        headers: {
+          "Set-Cookie": `token=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Strict; ${
+            process.env.NODE_ENV === "production" ? "Secure;" : ""
+          }`,
+        },
+      }
+    );
+  } catch (error) {
+    return Response.json(
+      { error: "Server error" },
+      { status: 500 }
+    );
   }
-
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    return Response.json({ error: "Invalid credentials" }, { status: 400 });
-  }
-
-  const token = jwt.sign(
-    { id: user._id, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
-
-  return new Response(JSON.stringify({ user }), {
-    headers: {
-      "Set-Cookie": `token=${token}; HttpOnly; Path=/; Max-Age=604800`,
-    },
-  });
 }
