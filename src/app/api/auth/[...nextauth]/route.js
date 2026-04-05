@@ -36,8 +36,12 @@ const handler = NextAuth({
         },
 
         async redirect({ url, baseUrl }) {
-            return baseUrl; // ✅ FORCE SAFE REDIRECT
-        },
+            console.log("REDIRECT URL:", url);
+            console.log("BASE URL:", baseUrl);
+            if (url.startsWith(baseUrl)) return url;
+            if (url.startsWith("/")) return baseUrl + url;
+            return baseUrl;
+        }
     },
 });
 
