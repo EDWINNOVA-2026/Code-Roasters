@@ -53,58 +53,84 @@ export default function UserView() {
   };
 
 
-const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  useEffect(() => {
+    if (status === "loading") return;
 
-useEffect(() => {
-  const fetchUser = async () => {
-    try {
-      const res = await fetch("/api/auth/me", {
-        credentials: "include",
-        cache: "no-store",
-      });
+    if (status === "unauthenticated") {
+      router.replace("/login");
+    }
+  }, [status, router]);
 
-      const data = await res.json();
+  useEffect(() => {
+    if (status === "loading") return;
 
-      // ✅ PRIORITY 1: custom login
-      if (data.user) {
-        setUser(data.user);
-      }
-
-      // ✅ PRIORITY 2: google login
-      else if (session?.user) {
-        setUser({
-          name: session.user.name,
-          email: session.user.email,
-          role: "user",
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store",
         });
-      }
 
-      else {
+        let data = null;
+
+        try {
+          data = await res.json();
+        } catch {
+          data = null;
+        }
+
+        // ✅ Custom JWT login
+        if (data?.user) {
+          setUser(data.user);
+          return;
+        }
+
+        // ✅ Google login
+        if (session?.user) {
+          setUser({
+            name: session.user.name,
+            email: session.user.email,
+            role: "user",
+          });
+          return;
+        }
+
+        setUser(null);
+      } catch {
         setUser(null);
       }
+    };
 
-    } catch {
-      setUser(null);
-    }
+    fetchUser();
+  }, [session, status]);
+
+
+  const handleLogout = async () => {
+    // clear your JWT
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+
+    // clear Google session
+    await signOut({ redirect: false });
+
+    setUser(null);
+    router.push("/login");
   };
 
-  fetchUser();
-}, [session]);
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white">
+        Loading...
+      </div>
+    );
+  }
 
-
-const handleLogout = async () => {
-  // clear your JWT
-  await fetch("/api/auth/logout", {
-    method: "POST",
-    credentials: "include",
-  });
-
-  // clear Google session
-  await signOut({ redirect: false });
-
-  setUser(null);
-  router.push("/login");
-};
+  if (status === "unauthenticated") {
+    return null;
+  }
   return (
 
     <div className="relative z-10 flex flex-col items-center min-h-screen pb-8 px-4">
