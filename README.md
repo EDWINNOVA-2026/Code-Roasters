@@ -1,4 +1,4 @@
-# GMU34 Development Server
+# Development Server
 
 This project serves a simple Express + SQLite backend from `backend/server.js` and a static frontend in `public/`.
 
