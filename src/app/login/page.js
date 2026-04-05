@@ -33,6 +33,8 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const { data: session } = useSession();
+  console.log("SESSION:", session);
 
   // 🔐 LOGIN
   const handleLogin = async (e) => {
@@ -81,7 +83,7 @@ export default function LoginPage() {
   };
 
   // 🔥 GOOGLE LOGIN (ONLY USER)
- const handleGoogleLogin = () => {
+const handleGoogleLogin = () => {
   signIn("google", {
     callbackUrl: "/",
   });

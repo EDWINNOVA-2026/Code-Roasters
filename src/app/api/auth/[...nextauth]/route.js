@@ -12,6 +12,8 @@ const handler = NextAuth({
     ],
 
     secret: process.env.NEXTAUTH_SECRET,
+    trustHost: true, // ✅ ADD THIS
+
     callbacks: {
         async signIn({ user }) {
             try {
