@@ -81,10 +81,11 @@ export default function LoginPage() {
   };
 
   // 🔥 GOOGLE LOGIN (ONLY USER)
-  const handleGoogleLogin = () => {
-    signIn("google", { callbackUrl: "/" });
-  };
-
+ const handleGoogleLogin = () => {
+  signIn("google", {
+    callbackUrl: "/",
+  });
+};
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
 

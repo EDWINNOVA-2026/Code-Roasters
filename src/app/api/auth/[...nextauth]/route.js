@@ -4,34 +4,39 @@ import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 
 const handler = NextAuth({
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    }),
-  ],
+    providers: [
+        GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        }),
+    ],
 
-  secret: process.env.NEXTAUTH_SECRET,
-  callbacks: {
-    async signIn({ user }) {
-      await connectDB();
+    secret: process.env.NEXTAUTH_SECRET,
+    callbacks: {
+        async signIn({ user }) {
+            try {
+                await connectDB();
 
-      let existing = await User.findOne({ email: user.email });
+                let existing = await User.findOne({ email: user.email });
 
-      if (!existing) {
-        await User.create({
-          email: user.email,
-          name: user.name,
-          role: "user",
-        });
-      }
+                if (!existing) {
+                    await User.create({
+                        email: user.email,
+                        name: user.name,
+                        role: "user",
+                    });
+                }
+            } catch (err) {
+                console.log("DB error:", err.message);
+            }
 
-      return true;
+            return true;
+        },
+
+        async redirect({ url, baseUrl }) {
+            return baseUrl; // ✅ FORCE SAFE REDIRECT
+        },
     },
-      async session({ session }) {
-      return session;
-      },
-  },
 });
 
 export { handler as GET, handler as POST };
