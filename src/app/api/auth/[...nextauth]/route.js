@@ -14,35 +14,38 @@ const handler = NextAuth({
     secret: process.env.NEXTAUTH_SECRET,
     trustHost: true, // ✅ ADD THIS
 
-    callbacks: {
-        async signIn({ user }) {
-            try {
-                await connectDB();
+  callbacks: {
+  async signIn({ user }) {
+    await connectDB();
 
-                let existing = await User.findOne({ email: user.email });
+    let existing = await User.findOne({ email: user.email });
 
-                if (!existing) {
-                    await User.create({
-                        email: user.email,
-                        name: user.name,
-                        role: "user",
-                    });
-                }
-            } catch (err) {
-                console.log("DB error:", err.message);
-            }
+    if (!existing) {
+      existing = await User.create({
+        email: user.email,
+        name: user.name,
+        role: "user",
+      });
+    }
 
-            return true;
-        },
+    user.role = existing.role;
+    return true;
+  },
 
-        async redirect({ url, baseUrl }) {
-            console.log("REDIRECT URL:", url);
-            console.log("BASE URL:", baseUrl);
-            if (url.startsWith(baseUrl)) return url;
-            if (url.startsWith("/")) return baseUrl + url;
-            return baseUrl;
-        }
-    },
+  async jwt({ token, user }) {
+    if (user) {
+      token.role = user.role;
+    }
+    return token;
+  },
+
+  async session({ session, token }) {
+    if (session.user) {
+      session.user.role = token.role;
+    }
+    return session;
+  },
+}
 });
 
 export { handler as GET, handler as POST };

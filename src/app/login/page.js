@@ -1,6 +1,6 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Eye,
@@ -33,10 +33,28 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { data: session } = useSession();
-  console.log("SESSION:", session);
+  const { data: session, status } = useSession();
 
   // 🔐 LOGIN
+  const redirectMap = {
+    user: "/",
+    driver: "/driver",
+    hospital: "/hospital",
+    admin: "/admin",
+  };
+
+  // 🔥 AUTO REDIRECT AFTER GOOGLE LOGIN
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (session?.user) {
+      const role = session.user.role || "user";
+
+      router.replace(redirectMap[role] || "/");
+    }
+  }, [session, status]);
+
+  // 🔐 MANUAL LOGIN
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -64,16 +82,8 @@ export default function LoginPage() {
 
       toast.success("Login successful 🚑");
 
-      const redirectMap = {
-        user: "/",
-        driver: "/driver",
-        hospital: "/hospital",
-        admin: "/admin",
-      };
-
-      setTimeout(() => {
-        window.location.href = redirectMap[role];
-      }, 800);
+      // ✅ ROLE BASED REDIRECT
+      router.replace(redirectMap[data.user.role] || "/");
 
     } catch (err) {
       toast.error(err.message || "Login failed");
@@ -82,12 +92,10 @@ export default function LoginPage() {
     }
   };
 
-  // 🔥 GOOGLE LOGIN (ONLY USER)
-const handleGoogleLogin = () => {
-  signIn("google", {
-    callbackUrl: "/",
-  });
-};
+  // 🔥 GOOGLE LOGIN
+  const handleGoogleLogin = () => {
+    signIn("google"); // ❌ NO callbackUrl
+  };
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
 

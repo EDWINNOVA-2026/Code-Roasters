@@ -52,8 +52,9 @@ export default function UserView() {
     setIsTracking(true);
   };
 
-const { data: session, status } = useSession();
- useEffect(() => {
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
     if (status === "loading") return;
 
     const fetchUser = async () => {
@@ -65,21 +66,15 @@ const { data: session, status } = useSession();
 
         const data = await res.json();
 
-        // ✅ PRIORITY 1 → Custom login
         if (data.user) {
           setUser(data.user);
-        }
-
-        // ✅ PRIORITY 2 → Google login
-        else if (session?.user) {
+        } else if (session?.user) {
           setUser({
             name: session.user.name,
             email: session.user.email,
             role: "user",
           });
-        }
-
-        else {
+        } else {
           setUser(null);
         }
 
@@ -89,11 +84,12 @@ const { data: session, status } = useSession();
     };
 
     fetchUser();
-  }, [session, status]);
+  }, [status, session]);
 
-  // 🔥 STEP 2: HANDLE REDIRECT (AFTER LOADING)
+  // 🔥 REDIRECT (ONLY AFTER EVERYTHING READY)
   useEffect(() => {
     if (status === "loading") return;
+    if (user === undefined) return; // ⛔ WAIT FOR USER
 
     if (status === "unauthenticated" && user === null) {
       router.replace("/login");
@@ -101,12 +97,16 @@ const { data: session, status } = useSession();
 
   }, [status, user, router]);
 
-  // 🔥 STEP 3: LOADING UI
-  if (status === "loading") {
-    return <div>Loading...</div>;
+  // 🔥 LOADING UI (PREVENT FLICKER)
+  if (status === "loading" || user === undefined) {
+    return (
+      <div className="h-screen flex items-center justify-center text-white">
+        Loading...
+      </div>
+    );
   }
 
-  // 🔥 STEP 4: LOGOUT
+  // 🔥 LOGOUT
   const handleLogout = async () => {
     await fetch("/api/auth/logout", {
       method: "POST",
@@ -118,15 +118,6 @@ const { data: session, status } = useSession();
     setUser(null);
     router.push("/login");
   };
-
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        Loading...
-      </div>
-    );
-  }
-
 
   return (
 
