@@ -54,45 +54,31 @@ export default function UserView() {
 
 
   const { data: session, status } = useSession();
+  // 1️⃣ Resolve user (Google first, then JWT)
   useEffect(() => {
     if (status === "loading") return;
 
-    if (status === "unauthenticated") {
-      router.replace("/login");
-    }
-  }, [status, router]);
+    const resolveUser = async () => {
+      if (session?.user) {
+        setUser({
+          name: session.user.name,
+          email: session.user.email,
+          role: "user",
+        });
+        return;
+      }
 
-  useEffect(() => {
-    if (status === "loading") return;
-
-    const fetchUser = async () => {
       try {
         const res = await fetch("/api/auth/me", {
           credentials: "include",
           cache: "no-store",
         });
 
-        let data = null;
+        if (!res.ok) throw new Error();
+        const data = await res.json();
 
-        try {
-          data = await res.json();
-        } catch {
-          data = null;
-        }
-
-        // ✅ Custom JWT login
         if (data?.user) {
           setUser(data.user);
-          return;
-        }
-
-        // ✅ Google login
-        if (session?.user) {
-          setUser({
-            name: session.user.name,
-            email: session.user.email,
-            role: "user",
-          });
           return;
         }
 
@@ -102,8 +88,17 @@ export default function UserView() {
       }
     };
 
-    fetchUser();
+    resolveUser();
   }, [session, status]);
+
+  // 2️⃣ 🔥 ADD YOUR REDIRECT HERE
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (!session?.user && user === null) {
+      router.replace("/login");
+    }
+  }, [status, session, user, router]);
 
 
   const handleLogout = async () => {
@@ -128,9 +123,7 @@ export default function UserView() {
     );
   }
 
-  if (status === "unauthenticated") {
-    return null;
-  }
+
   return (
 
     <div className="relative z-10 flex flex-col items-center min-h-screen pb-8 px-4">
