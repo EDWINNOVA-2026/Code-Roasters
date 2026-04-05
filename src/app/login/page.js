@@ -1,7 +1,7 @@
 "use client";
-
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useSession } from "next-auth/react";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Eye,
   EyeOff,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { signIn } from "next-auth/react";
 
 const roles = [
   { id: "user", label: "Patient", icon: User },
@@ -27,67 +28,40 @@ export default function LoginPage() {
   const router = useRouter();
 
   const [role, setRole] = useState("user");
-  const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
 
-  useEffect(() => {
-    setEmail("");
-    setPassword("");
-    setFullName("");
-  }, []);
-
-  // 🔐 LOGIN / REGISTER HANDLER
-  const handleEmailAuth = async (e) => {
+  // 🔐 LOGIN
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    // ✅ Validation
     if (!email || !password) {
-      toast.error("Missing fields", {
-        description: "Please enter email and password",
-      });
-      return;
+      return toast.error("Enter email & password");
     }
 
     setLoading(true);
 
     try {
-      const endpoint = isSignUp ? "/api/auth/register" : "/api/auth/login";
-
-      const res = await fetch(endpoint, {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           email,
           password,
-          fullName,
           role,
         }),
       });
 
-      let data = {};
-      try {
-        data = await res.json();
-      } catch {
-        data = {};
-      }
+      const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data?.message || "Invalid credentials");
-      }
+      if (!res.ok) throw new Error(data.message);
 
-      // ✅ SUCCESS TOAST
-      toast.success("Login successful 🚑", {
-        description: "Welcome back!",
-      });
+      toast.success("Login successful 🚑");
 
-      // ✅ ROLE REDIRECT
       const redirectMap = {
         user: "/",
         driver: "/driver",
@@ -96,27 +70,25 @@ export default function LoginPage() {
       };
 
       setTimeout(() => {
-        router.push(redirectMap[role]);
-      }, 1200);
+        window.location.href = redirectMap[role];
+      }, 800);
 
     } catch (err) {
-      toast.error("Login failed", {
-        description: err.message || "Something went wrong",
-      });
+      toast.error(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔥 GOOGLE LOGIN (dummy)
+  // 🔥 GOOGLE LOGIN (ONLY USER)
   const handleGoogleLogin = () => {
-    toast("Google login coming soon 🚀");
+    signIn("google", { callbackUrl: "/" });
   };
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
 
-      {/* 🔥 LEFT PANEL */}
+      {/* LEFT PANEL */}
       <motion.div
         initial={{ opacity: 0, x: -40 }}
         animate={{ opacity: 1, x: 0 }}
@@ -127,24 +99,15 @@ export default function LoginPage() {
           <h2 className="text-2xl font-bold">1 Minute Ambulance</h2>
         </div>
 
-        <img
-          src="/login-illustration.png"
-          className="w-[320px] mb-6"
-          alt="illustration"
-        />
+        <img src="/login-illustration.png" className="w-[320px] mb-6" />
 
         <p className="text-sm text-center max-w-md">
-          AI-powered emergency response at your fingertips. Every second counts —
-          we make sure help arrives in time.
+          AI-powered emergency response at your fingertips.
         </p>
       </motion.div>
 
-      {/* 🔥 RIGHT PANEL */}
-      <motion.div
-        initial={{ opacity: 0, x: 40 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="flex-1 bg-black flex items-center justify-center p-6"
-      >
+      {/* RIGHT PANEL */}
+      <motion.div className="flex-1 bg-black flex items-center justify-center p-6">
         <div className="w-full max-w-sm text-white">
 
           {/* ROLE SWITCH */}
@@ -155,11 +118,10 @@ export default function LoginPage() {
                 <button
                   key={r.id}
                   onClick={() => setRole(r.id)}
-                  className={`flex-1 py-2 text-xs rounded-lg flex items-center justify-center gap-1 ${
-                    role === r.id
-                      ? "bg-gradient-to-r from-amber-400 to-orange-500 text-black"
-                      : "text-gray-400"
-                  }`}
+                  className={`flex-1 py-2 text-xs rounded-lg flex items-center justify-center gap-1 ${role === r.id
+                    ? "bg-gradient-to-r from-amber-400 to-orange-500 text-black"
+                    : "text-gray-400"
+                    }`}
                 >
                   <Icon size={14} />
                   {r.label}
@@ -172,9 +134,6 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold mb-1">
             {role.charAt(0).toUpperCase() + role.slice(1)} Login
           </h1>
-          <p className="text-gray-400 text-sm mb-6">
-            Sign in to your account
-          </p>
 
           {/* GOOGLE LOGIN */}
           {role === "user" && (
@@ -199,40 +158,25 @@ export default function LoginPage() {
           )}
 
           {/* FORM */}
-          <form
-            onSubmit={handleEmailAuth}
-            autoComplete="off"
-            className="space-y-4"
-          >
-            {/* NAME */}
-            <AnimatePresence>
-              {isSignUp && (
-                <motion.input
-                  placeholder="Full Name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-white/5"
-                />
-              )}
-            </AnimatePresence>
+          <form onSubmit={handleLogin} className="space-y-4">
 
-            {/* EMAIL */}
             <input
               type="email"
               placeholder="Email Address"
               value={email}
               autoComplete="off"
+
               onChange={(e) => setEmail(e.target.value)}
               className="w-full p-3 rounded-xl bg-white/5"
             />
 
-            {/* PASSWORD */}
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Password"
-                value={password}
                 autoComplete="new-password"
+
+                value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full p-3 rounded-xl bg-white/5"
               />
@@ -245,30 +189,20 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {/* SUBMIT */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-amber-400 to-orange-500 text-black rounded-xl font-semibold flex justify-center items-center gap-2 disabled:opacity-50"
-            >
-              {loading ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <>
-                  Login <ArrowRight size={16} />
-                </>
-              )}
+            <button className="w-full py-3 bg-gradient-to-r from-amber-400 to-orange-500 text-black rounded-xl flex justify-center">
+              {loading ? <Loader2 className="animate-spin" /> : "Login"}
             </button>
+
           </form>
 
-          {/* TOGGLE */}
+          {/* NAVIGATION */}
           <p className="text-sm mt-4 text-center text-gray-400">
-            {isSignUp ? "Already have account?" : "Don't have account?"}
+            Don't have account?
             <button
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => router.push("/register")}
               className="text-amber-400 ml-2"
             >
-              {isSignUp ? "Login" : "Sign Up"}
+              Sign Up
             </button>
           </p>
 

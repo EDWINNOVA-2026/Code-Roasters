@@ -2,6 +2,9 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
+
 import {
   MapPin,
   Clock,
@@ -50,31 +53,58 @@ export default function UserView() {
   };
 
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await fetch("/api/auth/me", {
-          credentials: "include", // 🔥 REQUIRED
-          cache: "no-store",
-        });
-        const data = await res.json();
+const { data: session } = useSession();
+
+useEffect(() => {
+  const fetchUser = async () => {
+    try {
+      const res = await fetch("/api/auth/me", {
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+
+      // ✅ PRIORITY 1: custom login
+      if (data.user) {
         setUser(data.user);
-      } catch {
+      }
+
+      // ✅ PRIORITY 2: google login
+      else if (session?.user) {
+        setUser({
+          name: session.user.name,
+          email: session.user.email,
+          role: "user",
+        });
+      }
+
+      else {
         setUser(null);
       }
-    };
 
-    fetchUser();
-  }, []);
-
-
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-
-    setUser(null);
-
-    router.push("/login");
+    } catch {
+      setUser(null);
+    }
   };
+
+  fetchUser();
+}, [session]);
+
+
+const handleLogout = async () => {
+  // clear your JWT
+  await fetch("/api/auth/logout", {
+    method: "POST",
+    credentials: "include",
+  });
+
+  // clear Google session
+  await signOut({ redirect: false });
+
+  setUser(null);
+  router.push("/login");
+};
   return (
 
     <div className="relative z-10 flex flex-col items-center min-h-screen pb-8 px-4">
@@ -87,7 +117,7 @@ export default function UserView() {
 
             {/* USER NAME */}
             <div className="px-4 py-2 rounded-xl bg-white/5 text-xs text-white">
-              👤 {user.email?.split("@")[0].charAt(0).toUpperCase() + user.email?.split("@")[0].slice(1)}
+              👤 {user.name || user.email?.split("@")[0].charAt(0).toUpperCase() + user.email?.split("@")[0].slice(1) || "User"}
             </div>
 
             {/* LOGOUT */}

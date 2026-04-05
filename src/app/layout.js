@@ -1,5 +1,5 @@
 "use client";
-
+import { SessionProvider } from "next-auth/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 
@@ -11,20 +11,22 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          <TooltipProvider>
-            <MapBackground />
+        <SessionProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <MapBackground />
 
 
-            {children}
+              {children}
 
-            <Toaster
-              position="top-center"
-              richColors
-              expand
-            />
-          </TooltipProvider>
-        </AuthProvider>
+              <Toaster
+                position="top-center"
+                richColors
+                expand
+              />
+            </TooltipProvider>
+          </AuthProvider>
+        </SessionProvider>
       </body>
     </html>
   );
