@@ -1,0 +1,208 @@
+🚑 DRIVER PHONE FEATURE - VISUAL FLOW
+═════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    DRIVER SIGNUP FLOW                           │
+└─────────────────────────────────────────────────────────────────┘
+
+   DRIVER FILLS FORM:
+   ┌──────────────────────────────────────────────────────────┐
+   │ Name:           [Sanjay Kumar              ]              │
+   │ Email:          [sanjay@email.com         ]              │
+   │ Password:       [••••••••••••••••••       ]              │
+   │ 📱 Phone:       [9876543210   ] ← NEW FIELD              │
+   │ Vehicle:        [KA-01-AB-1234]              │
+   │ Base Location:  [JP Nagar Circle           ]              │
+   │                                                            │
+   │ [Register as driver button                 ]              │
+   └──────────────────────────────────────────────────────────┘
+                         ↓
+      POST /api/driver/signup
+      {
+        "name": "Sanjay Kumar",
+        "email": "sanjay@email.com",
+        "password": "•••••",
+        "phone": "9876543210",        ← SENT
+        "vehicle": "KA-01-AB-1234",
+        "baseLocation": "JP Nagar Circle"
+      }
+                         ↓
+      Database: drivers table
+      ┌─────────────────────────────────────────────────────────┐
+      │ id │ name           │ phone        │ email              │
+      ├────┼────────────────┼──────────────┼────────────────────┤
+      │ 10 │ Sanjay Kumar   │ 9876543210   │ sanjay@email.com   │
+      └─────────────────────────────────────────────────────────┘
+                         ↓
+      Response to Driver:
+      {
+        "message": "Driver registered",
+        "driver": {
+          "id": 10,
+          "name": "Sanjay Kumar",
+          "phone": "9876543210",        ← RETURNED
+          "email": "sanjay@email.com",
+          ...
+        }
+      }
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│                   BOOKING CREATION FLOW                          │
+└─────────────────────────────────────────────────────────────────┘
+
+   USER CREATES BOOKING:
+   POST /api/bookings
+   {
+     "userName": "Priya",
+     "userPhone": "8888888888",
+     "emergencyType": "Heart attack",
+     "pickup": "Bangalore Central"
+   }
+                         ↓
+      System selects nearest driver:
+      Driver: Sanjay Kumar
+      Phone: 9876543210              ← RETRIEVED FROM drivers table
+                         ↓
+      Database: bookings table
+      ┌──────────────────────────────────────────────────────────┐
+      │ id │ userName │ userPhone  │ driverId │ driverPhone      │
+      ├────┼──────────┼────────────┼──────────┼──────────────────┤
+      │101 │ Priya    │8888888888  │   10     │ 9876543210  ← NEW│
+      └──────────────────────────────────────────────────────────┘
+                         ↓
+      Response: Booking created with driverPhone
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│              DRIVER DASHBOARD (Driver View)                      │
+└─────────────────────────────────────────────────────────────────┘
+
+   Driver Sanjay logs in and sees assigned bookings:
+
+   ┌────────────────────────────────────────────────────────┐
+   │ DRIVER DASHBOARD                                       │
+   ├────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ 🏥 Hospital: City Multi-Speciality Hospital           │
+   │ Status: pending                                        │
+   │ Emergency Type: Heart attack                           │
+   │ Location: Bangalore Central                            │
+   │                                                         │
+   │ 👤 Patient: Priya                                     │
+   │ 📞 Phone: 8888888888  ← DRIVER SEES USER PHONE       │
+   │                                                         │
+   │ [Accept Request] [Reject Request]                     │
+   │                                                         │
+   └────────────────────────────────────────────────────────┘
+                         ↓
+      Driver Sanjay accepts the request
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│         PATIENT DASHBOARD (After Driver Accepts)                 │
+└─────────────────────────────────────────────────────────────────┘
+
+   User Priya's booking status (ACCEPTED):
+
+   ┌────────────────────────────────────────────────────────┐
+   │ BOOKING STATUS                                         │
+   ├────────────────────────────────────────────────────────┤
+   │                                                         │
+   │ 🏥 Hospital: City Multi-Speciality Hospital           │
+   │ Status: accepted                                       │
+   │                                                         │
+   │ 6 min away (driver on the way)                        │
+   │                                                         │
+   │ 🚑 Driver: Sanjay Kumar                               │
+   │    (KA-01-AB-1234, JP Nagar Circle)                   │
+   │ 📞 Phone: 9876543210  ← PATIENT SEES DRIVER PHONE ✓   │
+   │                                                         │
+   │ ✓ Driver has accepted and is on the way.              │
+   │                                                         │
+   │ 📍 Your location: (12.98765, 77.54321)               │
+   │ 🚑 Ambulance location: (12.95432, 77.56789)          │
+   │                                                         │
+   └────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│                   DATA FLOW SUMMARY                              │
+└─────────────────────────────────────────────────────────────────┘
+
+    ┌────────────────┐
+    │  DRIVER SIGNUP │
+    │  Enter phone   │
+    └────────┬───────┘
+             │
+             │ Stored in drivers.phone
+             ↓
+    ┌────────────────────┐
+    │ DRIVER PHONE SAVED │
+    │ drivers table      │
+    └────────┬───────────┘
+             │
+             │ Used when booking created
+             ↓
+    ┌────────────────────┐
+    │ BOOKING CREATED    │
+    │ driverPhone copied │
+    │ bookings table     │
+    └────────┬───────────┘
+             │
+             │ Retrieved for patient view
+             ↓
+    ┌────────────────────┐
+    │ PATIENT SEES       │
+    │ DRIVER PHONE ✓     │
+    │ On dashboard       │
+    └────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│              BIDIRECTIONAL COMMUNICATION                         │
+└─────────────────────────────────────────────────────────────────┘
+
+    Before Feature:                After Feature:
+    ────────────────              ────────────────
+
+    USER                          USER
+      ├─ enters phone       ✓        ├─ enters phone       ✓
+      └─ phone shown to          ✓   └─ phone shown to     ✓
+        driver             ✓          driver               ✓
+                                      
+    DRIVER                        DRIVER
+      ├─ no phone required ✗        ├─ enters phone       ✓ NEW!
+      └─ phone NOT shown to        ✗ └─ phone shown to     ✓ NEW!
+        patient           ✗           patient              ✓ NEW!
+
+
+    Result: ✓ COMPLETE BIDIRECTIONAL COMMUNICATION ✓
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│                  DATABASE SCHEMA                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+drivers table:
+┌──────┬──────────────┬────────┬───────────┬──────────────┐
+│ id   │ name         │ phone  │ email     │ vehicle      │
+├──────┼──────────────┼────────┼───────────┼──────────────┤
+│ 10   │ Sanjay Kumar │ 98765  │ sanj@..   │ KA-01-AB-..  │
+│ 11   │ Rohit Sharma │ 98765  │ rohit@..  │ TN-02-CD-..  │
+│ 12   │ Priya Singh  │ 98765  │ priya@..  │ KA-03-EF-..  │
+└──────┴──────────────┴────────┴───────────┴──────────────┘
+
+bookings table:
+┌───┬──────────┬──────────────┬───────────┬───────────────┐
+│id │ userName │ userPhone    │ driverID  │ driverPhone   │
+├───┼──────────┼──────────────┼───────────┼───────────────┤
+│100│ Priya    │ 8888888888   │ 10        │ 9876543210    │
+│101│ Anand    │ 7777777777   │ 11        │ 9876543211    │
+│102│ Neha     │ 6666666666   │ 12        │ 9876543212    │
+└───┴──────────┴──────────────┴───────────┴───────────────┘
+
+
+═════════════════════════════════════════════════════════════════
+                    ✨ FEATURE COMPLETE ✨
+═════════════════════════════════════════════════════════════════
