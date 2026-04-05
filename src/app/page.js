@@ -52,63 +52,67 @@ export default function UserView() {
     setIsTracking(true);
   };
 
-
-  const { data: session, status } = useSession();
-  // 1️⃣ Resolve user (Google first, then JWT)
-  useEffect(() => {
+const { data: session, status } = useSession();
+ useEffect(() => {
     if (status === "loading") return;
 
-    const resolveUser = async () => {
-      if (session?.user) {
-        setUser({
-          name: session.user.name,
-          email: session.user.email,
-          role: "user",
-        });
-        return;
-      }
-
+    const fetchUser = async () => {
       try {
         const res = await fetch("/api/auth/me", {
           credentials: "include",
           cache: "no-store",
         });
 
-        if (!res.ok) throw new Error();
         const data = await res.json();
 
-        if (data?.user) {
+        // ✅ PRIORITY 1 → Custom login
+        if (data.user) {
           setUser(data.user);
-          return;
         }
 
-        setUser(null);
+        // ✅ PRIORITY 2 → Google login
+        else if (session?.user) {
+          setUser({
+            name: session.user.name,
+            email: session.user.email,
+            role: "user",
+          });
+        }
+
+        else {
+          setUser(null);
+        }
+
       } catch {
         setUser(null);
       }
     };
 
-    resolveUser();
+    fetchUser();
   }, [session, status]);
 
-  // 2️⃣ 🔥 ADD YOUR REDIRECT HERE
+  // 🔥 STEP 2: HANDLE REDIRECT (AFTER LOADING)
   useEffect(() => {
     if (status === "loading") return;
 
-    if (!session?.user && user === null) {
+    if (status === "unauthenticated" && user === null) {
       router.replace("/login");
     }
-  }, [status, session, user, router]);
 
+  }, [status, user, router]);
 
+  // 🔥 STEP 3: LOADING UI
+  if (status === "loading") {
+    return <div>Loading...</div>;
+  }
+
+  // 🔥 STEP 4: LOGOUT
   const handleLogout = async () => {
-    // clear your JWT
     await fetch("/api/auth/logout", {
       method: "POST",
       credentials: "include",
     });
 
-    // clear Google session
     await signOut({ redirect: false });
 
     setUser(null);
